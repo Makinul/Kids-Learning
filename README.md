@@ -31,6 +31,7 @@ Welcome to the **Alphabet Learning App**, an interactive and fun Android applica
     *   Android device or emulator
 
 2.  **Clone the Repository:**
+
 3.  **Open in Android Studio:**
     *   Launch Android Studio.
     *   Select "Open an Existing Project" and navigate to the cloned repository.
