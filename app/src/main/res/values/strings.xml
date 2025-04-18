@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Alphabet Learn</string>
+    <string name="next_letter">Next Letter</string>
+    <string name="clear">Clear</string>
+</resources>
