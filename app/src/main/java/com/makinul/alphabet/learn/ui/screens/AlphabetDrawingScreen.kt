@@ -3,6 +3,7 @@ package com.makinul.alphabet.learn.ui.screens
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -32,12 +34,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.rememberLottieComposition
 import com.makinul.alphabet.learn.R
+import android.speech.tts.TextToSpeech
+import android.util.Log
 import com.makinul.alphabet.learn.utils.AppConstants
 import java.util.Locale
+import android.media.MediaPlayer
 
 @Preview
 @Composable
@@ -49,6 +59,9 @@ fun AlphabetDrawingScreen() {
     val context = LocalContext.current
     var textToSpeech: TextToSpeech? by remember { mutableStateOf(null) }
     var ttsInitialized by remember { mutableStateOf(false) }
+
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.background_animation))
+    val mediaPlayer = remember { MediaPlayer.create(context, R.raw.background_music) }
 
     DisposableEffect(Unit) {
         textToSpeech = TextToSpeech(context) { status ->
@@ -63,138 +76,143 @@ fun AlphabetDrawingScreen() {
                 Log.e("TTS", "Initialization Failed!")
             }
         }
+        mediaPlayer.isLooping = true
+        mediaPlayer.start()
 
         onDispose {
             textToSpeech?.stop()
             textToSpeech?.shutdown()
+            mediaPlayer.release()
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Draw the letter: $currentLetter",
-            style = MaterialTheme.typography.headlineLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        LottieAnimation(
+            composition = composition,
+            iterations = LottieConstants.IterateForever,
+            modifier = Modifier.fillMaxSize()
         )
-        Log.d("AlphabetDrawingScreen", "currentLetter: $currentLetter")
-        if (ttsInitialized) {
-            textToSpeech?.speak(currentLetter.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
-        } else {
-            Log.e("TTS", "TTS not initialized yet!")
-            // Optionally, show a message to the user
-        }
-        Card(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(8.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            Text(
+                text = "Draw the letter: $currentLetter",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF5C6BC0),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Log.d("AlphabetDrawingScreen", "currentLetter: $currentLetter")
+            if (ttsInitialized) {
+                textToSpeech?.speak(currentLetter.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
+            } else {
+                Log.e("TTS", "TTS not initialized yet!")
+            }
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(8.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.8f))
             ) {
-                // Background letter
-                Text(
-                    text = currentLetter.toString(),
-                    color = Color.LightGray,
-                    fontSize = 200.sp,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-
-                // Drawing canvas
-                Canvas(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    currentPath = Path().apply {
-                                        moveTo(offset.x, offset.y)
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    currentPath?.lineTo(
-                                        change.position.x,
-                                        change.position.y
-                                    )
-                                },
-                                onDragEnd = {
-                                    currentPath?.let {
-                                        paths = paths + it
-                                        currentPath = null
+                ) {
+                    // Background letter
+                    Text(
+                        text = currentLetter.toString(),
+                        color = Color.LightGray.copy(alpha = 0.5f),
+                        fontSize = 200.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
 
-                                        // Check if the drawn path is similar to the current letter
-                                        if (AppConstants.isPathSimilarToChar(it, currentLetter)) {
-                                            Log.d(
-                                                "Drawing",
-                                                "Path recognized as letter: $currentLetter"
-                                            )
-                                            // Handle correct drawing (e.g., move to the next letter, show success message)
-                                            // For example:
-                                            // currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
-                                            // paths = emptyList()
-                                        } else {
-                                            Log.d(
-                                                "Drawing",
-                                                "Path not recognized as letter: $currentLetter"
-                                            )
-                                            // Handle incorrect drawing (e.g., clear the path, show an error message)
-                                            // For example:
-                                            // paths = emptyList()
-                                            // Show error message (you'll need to implement this in your UI)
+                    // Drawing canvas
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        currentPath = Path().apply {
+                                            moveTo(offset.x, offset.y)
+                                        }
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        currentPath?.lineTo(
+                                            change.position.x,
+                                            change.position.y
+                                        )
+                                    },
+                                    onDragEnd = {
+                                        currentPath?.let {
+                                            paths = paths + it
+                                            currentPath = null
+
+                                            if (AppConstants.isPathSimilarToChar(it, currentLetter)) {
+                                                Log.d(
+                                                    "Drawing",
+                                                    "Path recognized as letter: $currentLetter"
+                                                )
+                                            } else {
+                                                Log.d(
+                                                    "Drawing",
+                                                    "Path not recognized as letter: $currentLetter"
+                                                )
+                                            }
                                         }
                                     }
-                                }
+                                )
+                            }
+                    ) {
+                        paths.forEach { path ->
+                            drawPath(
+                                path = path,
+                                color = Color(0xFF42A5F5),
+                                style = Stroke(width = 25f, cap = StrokeCap.Round)
                             )
                         }
+                        currentPath?.let { path ->
+                            drawPath(
+                                path = path,
+                                color = Color(0xFF42A5F5),
+                                style = Stroke(width = 25f, cap = StrokeCap.Round)
+                            )
+                        }
+                        Log.d("drawPath", "currentLetter: $currentLetter")
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                Button(
+                    onClick = {
+                        paths = emptyList()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
                 ) {
-                    paths.forEach { path ->
-                        drawPath(
-                            path = path,
-                            color = Color.Blue,
-                            style = Stroke(width = 20f, cap = StrokeCap.Round)
-                        )
-                    }
-                    currentPath?.let { path ->
-                        drawPath(
-                            path = path,
-                            color = Color.Blue,
-                            style = Stroke(width = 20f, cap = StrokeCap.Round)
-                        )
-                    }
-                    Log.d("drawPath", "currentLetter: $currentLetter")
+                    Text(stringResource(R.string.clear), color = Color.White)
                 }
-            }
-        }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Button(
-                onClick = {
-                    paths = emptyList()
+                Button(
+                    onClick = {
+                        currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
+                        paths = emptyList()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A))
+                ) {
+                    Text(stringResource(R.string.next_letter), color = Color.White)
                 }
-            ) {
-                Text(stringResource(R.string.clear))
-            }
-
-            Button(
-                onClick = {
-                    currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
-                    paths = emptyList()
-                }
-            ) {
-                Text(stringResource(R.string.next_letter))
             }
         }
     }
