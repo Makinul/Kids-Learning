@@ -1,10 +1,9 @@
 package com.makinul.alphabet.learn.ui.screens
 
+import android.media.MediaPlayer
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,7 +34,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.airbnb.lottie.compose.LottieAnimation
@@ -43,13 +41,9 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.makinul.alphabet.learn.R
-import android.speech.tts.TextToSpeech
-import android.util.Log
 import com.makinul.alphabet.learn.utils.AppConstants
 import java.util.Locale
-import android.media.MediaPlayer
 
-@Preview
 @Composable
 fun AlphabetDrawingScreen() {
     var currentLetter by remember { mutableStateOf('A') }
@@ -61,6 +55,13 @@ fun AlphabetDrawingScreen() {
     var ttsInitialized by remember { mutableStateOf(false) }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.background_animation))
+
+    // Copyright
+    // The Builder by Kevin MacLeod | https://incompetech.com/
+    // Music promoted by https://www.chosic.com/free-music/all/
+    // Creative Commons CC BY 3.0
+    // https://creativecommons.org/licenses/by/3.0/
+    //
     val mediaPlayer = remember { MediaPlayer.create(context, R.raw.background_music) }
 
     DisposableEffect(Unit) {
