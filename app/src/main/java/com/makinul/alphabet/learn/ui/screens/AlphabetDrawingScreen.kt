@@ -16,8 +16,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +47,7 @@ import com.makinul.alphabet.learn.R
 import com.makinul.alphabet.learn.utils.AppConstants
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlphabetDrawingScreen() {
     var currentLetter by remember { mutableStateOf('A') }
@@ -87,132 +91,142 @@ fun AlphabetDrawingScreen() {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        LottieAnimation(
-            composition = composition,
-            iterations = LottieConstants.IterateForever,
-            modifier = Modifier.fillMaxSize()
-        )
-        Column(
+    Scaffold(
+        topBar = { TopAppBar(title = { Text("Draw the letter: $currentLetter") }) }
+    ) { inlinePadding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(inlinePadding)
         ) {
-            Text(
-                text = "Draw the letter: $currentLetter",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF5C6BC0),
-                modifier = Modifier.padding(bottom = 16.dp)
+            LottieAnimation(
+                composition = composition,
+                iterations = LottieConstants.IterateForever,
+                modifier = Modifier.fillMaxSize()
             )
-            Log.d("AlphabetDrawingScreen", "currentLetter: $currentLetter")
-            if (ttsInitialized) {
-                textToSpeech?.speak(currentLetter.toString(), TextToSpeech.QUEUE_FLUSH, null, null)
-            } else {
-                Log.e("TTS", "TTS not initialized yet!")
-            }
-            Card(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(8.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.8f))
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    // Background letter
-                    Text(
-                        text = currentLetter.toString(),
-                        color = Color.LightGray.copy(alpha = 0.5f),
-                        fontSize = 200.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.align(Alignment.Center)
+                Log.d("AlphabetDrawingScreen", "currentLetter: $currentLetter")
+                if (ttsInitialized) {
+                    textToSpeech?.speak(
+                        currentLetter.toString(),
+                        TextToSpeech.QUEUE_FLUSH,
+                        null,
+                        null
                     )
-
-                    // Drawing canvas
-                    Canvas(
+                } else {
+                    Log.e("TTS", "TTS not initialized yet!")
+                }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.8f))
+                ) {
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragStart = { offset ->
-                                        currentPath = Path().apply {
-                                            moveTo(offset.x, offset.y)
-                                        }
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        currentPath?.lineTo(
-                                            change.position.x,
-                                            change.position.y
-                                        )
-                                    },
-                                    onDragEnd = {
-                                        currentPath?.let {
-                                            paths = paths + it
-                                            currentPath = null
+                    ) {
+                        // Background letter
+                        Text(
+                            text = currentLetter.toString(),
+                            color = Color.LightGray.copy(alpha = 0.5f),
+                            fontSize = 200.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
 
-                                            if (AppConstants.isPathSimilarToChar(it, currentLetter)) {
-                                                Log.d(
-                                                    "Drawing",
-                                                    "Path recognized as letter: $currentLetter"
-                                                )
-                                            } else {
-                                                Log.d(
-                                                    "Drawing",
-                                                    "Path not recognized as letter: $currentLetter"
-                                                )
+                        // Drawing canvas
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectDragGestures(
+                                        onDragStart = { offset ->
+                                            currentPath = Path().apply {
+                                                moveTo(offset.x, offset.y)
+                                            }
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            currentPath?.lineTo(
+                                                change.position.x,
+                                                change.position.y
+                                            )
+                                        },
+                                        onDragEnd = {
+                                            currentPath?.let {
+                                                paths = paths + it
+                                                currentPath = null
+
+                                                if (AppConstants.isPathSimilarToChar(
+                                                        it,
+                                                        currentLetter
+                                                    )
+                                                ) {
+                                                    Log.d(
+                                                        "Drawing",
+                                                        "Path recognized as letter: $currentLetter"
+                                                    )
+                                                } else {
+                                                    Log.d(
+                                                        "Drawing",
+                                                        "Path not recognized as letter: $currentLetter"
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
+                                    )
+                                }
+                        ) {
+                            paths.forEach { path ->
+                                drawPath(
+                                    path = path,
+                                    color = Color(0xFF42A5F5),
+                                    style = Stroke(width = 25f, cap = StrokeCap.Round)
                                 )
                             }
-                    ) {
-                        paths.forEach { path ->
-                            drawPath(
-                                path = path,
-                                color = Color(0xFF42A5F5),
-                                style = Stroke(width = 25f, cap = StrokeCap.Round)
-                            )
+                            currentPath?.let { path ->
+                                drawPath(
+                                    path = path,
+                                    color = Color(0xFF42A5F5),
+                                    style = Stroke(width = 25f, cap = StrokeCap.Round)
+                                )
+                            }
+                            Log.d("drawPath", "currentLetter: $currentLetter")
                         }
-                        currentPath?.let { path ->
-                            drawPath(
-                                path = path,
-                                color = Color(0xFF42A5F5),
-                                style = Stroke(width = 25f, cap = StrokeCap.Round)
-                            )
-                        }
-                        Log.d("drawPath", "currentLetter: $currentLetter")
                     }
                 }
-            }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                Button(
-                    onClick = {
-                        paths = emptyList()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Text(stringResource(R.string.clear), color = Color.White)
-                }
+                    Button(
+                        onClick = {
+                            paths = emptyList()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
+                    ) {
+                        Text(stringResource(R.string.clear), color = Color.White)
+                    }
 
-                Button(
-                    onClick = {
-                        currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
-                        paths = emptyList()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A))
-                ) {
-                    Text(stringResource(R.string.next_letter), color = Color.White)
+                    Button(
+                        onClick = {
+                            currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
+                            paths = emptyList()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A))
+                    ) {
+                        Text(stringResource(R.string.next_letter), color = Color.White)
+                    }
                 }
             }
         }

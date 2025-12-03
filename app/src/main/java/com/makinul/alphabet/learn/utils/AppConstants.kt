@@ -7,7 +7,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.toComposeRect
-import java.lang.Math.abs
+import kotlin.math.abs
 
 object AppConstants {
 
