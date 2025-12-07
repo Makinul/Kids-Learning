@@ -6,8 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
@@ -19,34 +20,42 @@ import androidx.navigation3.ui.NavDisplay
 import com.makinul.alphabet.learn.ui.screens.AlphabetDrawingScreen
 import com.makinul.alphabet.learn.ui.theme.AlphabetLearnTheme
 
-data object InitialScreen
-data class SecondaryScreen(val name: String)
+data object Home
+data object Drawing
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
             AlphabetLearnTheme {
-                val backStack = remember { mutableStateListOf<Any>(SecondaryScreen("123")) }
+                val backStack = remember { mutableStateListOf<Any>(Home) }
 
                 NavDisplay(
                     backStack = backStack,
-                    onBack = { backStack.removeLastOrNull() },
+                    onBack = {
+                        if (backStack.size > 1) {
+                            backStack.removeAt(backStack.lastIndex)
+                        } else {
+                            finish()
+                        }
+                    },
                     entryProvider = { key ->
                         when (key) {
-                            is InitialScreen -> NavEntry(key) {
-                                Greeting("Greetings") {
-                                    backStack.add(SecondaryScreen("123"))
-                                }
+                            Home -> NavEntry(key) {
+                                HomeScreen(
+                                    onStartClick = { backStack.add(Drawing) }
+                                )
                             }
-
-                            is SecondaryScreen -> NavEntry(key) {
+                            Drawing -> NavEntry(key) {
                                 AlphabetDrawingScreen()
                             }
-
-                            else -> error("Invalid key: $key")
+                            else -> NavEntry(key) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("Unknown Destination")
+                                }
+                            }
                         }
                     }
                 )
@@ -56,14 +65,17 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting(name: String, onClick: @Composable () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-
-        Button(
-            onClick = { onClick },
-            modifier = Modifier.fillMaxWidth()
+fun HomeScreen(onStartClick: () -> Unit) {
+    Scaffold { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
         ) {
-            Text(text = "Hello $name!")
+            Button(onClick = onStartClick) {
+                Text(text = "Start Learning")
+            }
         }
     }
 }
