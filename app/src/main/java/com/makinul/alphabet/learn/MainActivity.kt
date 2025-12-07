@@ -21,6 +21,7 @@ import com.makinul.alphabet.learn.ui.screens.AlphabetDrawingScreen
 import com.makinul.alphabet.learn.ui.theme.AlphabetLearnTheme
 
 data object Home
+data object Details
 data object Drawing
 
 class MainActivity : ComponentActivity() {
@@ -37,20 +38,26 @@ class MainActivity : ComponentActivity() {
                     onBack = {
                         if (backStack.size > 1) {
                             backStack.removeAt(backStack.lastIndex)
-                        } else {
-                            finish()
                         }
                     },
                     entryProvider = { key ->
                         when (key) {
                             Home -> NavEntry(key) {
-                                HomeScreen(
-                                    onStartClick = { backStack.add(Drawing) }
-                                )
+                                HomeScreen {
+                                    backStack.add(Details)
+                                }
                             }
+
+                            Details -> NavEntry(key) {
+                                DetailsScreen {
+                                    backStack.add(Drawing)
+                                }
+                            }
+
                             Drawing -> NavEntry(key) {
                                 AlphabetDrawingScreen()
                             }
+
                             else -> NavEntry(key) {
                                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Text("Unknown Destination")
@@ -66,6 +73,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen(onStartClick: () -> Unit) {
+    Scaffold { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+            contentAlignment = Alignment.Center
+        ) {
+            Button(onClick = onStartClick) {
+                Text(text = "Go for details")
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailsScreen(onStartClick: () -> Unit) {
     Scaffold { innerPadding ->
         Box(
             modifier = Modifier
