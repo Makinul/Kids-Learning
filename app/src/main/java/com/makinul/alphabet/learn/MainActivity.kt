@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -19,6 +21,7 @@ import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import com.makinul.alphabet.learn.ui.screens.AlphabetDrawingScreen
 import com.makinul.alphabet.learn.ui.theme.AlphabetLearnTheme
+import kotlinx.coroutines.delay
 
 data object Home
 data object Details
@@ -38,13 +41,18 @@ class MainActivity : ComponentActivity() {
                     onBack = {
                         if (backStack.size > 1) {
                             backStack.removeAt(backStack.lastIndex)
+                        } else {
+                            finish()
                         }
                     },
                     entryProvider = { key ->
                         when (key) {
                             Home -> NavEntry(key) {
                                 HomeScreen {
-                                    backStack.add(Details)
+                                    // Replace Home with Details so Home is not in the back stack
+                                    if (backStack.isNotEmpty()) {
+                                        backStack[backStack.lastIndex] = Details
+                                    }
                                 }
                             }
 
@@ -72,7 +80,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HomeScreen(onStartClick: () -> Unit) {
+fun HomeScreen(onTimeout: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(5000)
+        onTimeout()
+    }
     Scaffold { innerPadding ->
         Box(
             modifier = Modifier
@@ -80,9 +92,7 @@ fun HomeScreen(onStartClick: () -> Unit) {
                 .padding(innerPadding),
             contentAlignment = Alignment.Center
         ) {
-            Button(onClick = onStartClick) {
-                Text(text = "Go for details")
-            }
+            CircularProgressIndicator()
         }
     }
 }
