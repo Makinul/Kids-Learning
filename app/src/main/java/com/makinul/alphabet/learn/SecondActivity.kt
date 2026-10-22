@@ -3,6 +3,7 @@ package com.makinul.alphabet.learn
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ data object SecondDetails
 class SecondActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
             AlphabetLearnTheme {
                 SecondaryScreen()
@@ -107,27 +109,29 @@ fun SecondHomeScreen(onTimeout: () -> Unit) {
 
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun SecondDetailsScreen() {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drawing", "Details", "Settings")
 
     Scaffold(
         topBar = {
-            SecondaryTabRow(selectedTabIndex = selectedTabIndex) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = { Text(title) }
-                    )
+            Column {
+                TopAppBar(title = { Text("Alphabet Learning") })
+                SecondaryTabRow(selectedTabIndex = selectedTabIndex) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
+                            text = { Text(title) }
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .windowInsetsPadding(WindowInsets.statusBars)
+            modifier = Modifier.padding(innerPadding)
         ) {
             when (selectedTabIndex) {
                 0 -> DrawingContent()

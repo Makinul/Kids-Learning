@@ -108,7 +108,7 @@ fun HomeScreen(onTimeout: () -> Unit) {
 
 @Composable
 fun DetailsScreen() {
-    var selectedTabIndex by remember { mutableIntStateOf(2) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Drawing", "Details", "Settings")
 
     Scaffold(

@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,10 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.makinul.alphabet.learn.R
 import com.makinul.alphabet.learn.utils.AppConstants
 import java.util.Locale
@@ -49,14 +48,35 @@ fun DrawingContent() {
     var currentLetter by remember { mutableStateOf('A') }
     var paths by remember { mutableStateOf(listOf<Path>()) }
     var currentPath by remember { mutableStateOf<Path?>(null) }
+    var recognitionResult by remember { mutableStateOf<Boolean?>(null) }
+    var recognitionFinished by remember { mutableStateOf(false) }
+    var recognitionGeneration by remember { mutableStateOf(0) }
 
     val context = LocalContext.current
     var textToSpeech: TextToSpeech? by remember { mutableStateOf(null) }
     var ttsInitialized by remember { mutableStateOf(false) }
 
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.background_animation))
-
     val mediaPlayer = remember { MediaPlayer.create(context, R.raw.background_music) }
+
+    LaunchedEffect(paths, currentLetter) {
+        val generation = recognitionGeneration
+        if (paths.isNotEmpty() && !recognitionFinished && recognitionResult == null) {
+            kotlinx.coroutines.delay(3_000)
+            if (generation == recognitionGeneration && !recognitionFinished && recognitionResult == null) {
+                recognitionFinished = true
+                recognitionResult = AppConstants.isPathsSimilarToChar(paths, currentLetter)
+            }
+        }
+    }
+
+    LaunchedEffect(recognitionResult) {
+        if (recognitionResult != null) {
+            kotlinx.coroutines.delay(1_800)
+            recognitionGeneration++
+            recognitionResult = null
+            paths = emptyList()
+        }
+    }
 
     DisposableEffect(Unit) {
         textToSpeech = TextToSpeech(context) { status ->
@@ -96,11 +116,6 @@ fun DrawingContent() {
         modifier = Modifier
             .fillMaxSize()
     ) {
-        LottieAnimation(
-            composition = composition,
-            iterations = LottieConstants.IterateForever,
-            modifier = Modifier.fillMaxSize()
-        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,15 +150,20 @@ fun DrawingContent() {
                             .pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragStart = { offset ->
+                                        recognitionGeneration++
+                                        recognitionFinished = false
+                                        recognitionResult = null
                                         currentPath = Path().apply {
                                             moveTo(offset.x, offset.y)
                                         }
                                     },
-                                    onDrag = { change, dragAmount ->
-                                        currentPath?.lineTo(
-                                            change.position.x,
-                                            change.position.y
-                                        )
+                                    onDrag = { change, _ ->
+                                            currentPath?.let { path ->
+                                                currentPath = Path().apply {
+                                                    addPath(path)
+                                                    lineTo(change.position.x, change.position.y)
+                                                }
+                                            }
                                     },
                                     onDragEnd = {
                                         currentPath?.let {
@@ -178,9 +198,21 @@ fun DrawingContent() {
                     .padding(top = 16.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
+                    Button(
+                        onClick = {
+                            currentLetter = if (currentLetter == 'A') 'Z' else currentLetter - 1
+                            paths = emptyList()
+                            recognitionResult = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
+                    ) {
+                        Text(stringResource(R.string.previous_letter), color = Color.White)
+                    }
+
                 Button(
                     onClick = {
                         paths = emptyList()
+                            recognitionResult = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
                 ) {
@@ -191,12 +223,28 @@ fun DrawingContent() {
                     onClick = {
                         currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
                         paths = emptyList()
+                            recognitionResult = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A))
                 ) {
                     Text(stringResource(R.string.next_letter), color = Color.White)
                 }
             }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = recognitionResult != null,
+        enter = scaleIn(),
+        exit = scaleOut()
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = if (recognitionResult == true) "✓ Success!" else "✕ Try Again",
+                color = if (recognitionResult == true) Color(0xFF2E7D32) else Color(0xFFC62828),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

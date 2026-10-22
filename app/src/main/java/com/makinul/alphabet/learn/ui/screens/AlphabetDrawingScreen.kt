@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -23,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,10 +43,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.airbnb.lottie.compose.LottieAnimation
-import com.airbnb.lottie.compose.LottieCompositionSpec
-import com.airbnb.lottie.compose.LottieConstants
-import com.airbnb.lottie.compose.rememberLottieComposition
 import com.makinul.alphabet.learn.R
 import com.makinul.alphabet.learn.utils.AppConstants
 import java.util.Locale
@@ -53,12 +53,13 @@ fun AlphabetDrawingScreen() {
     var currentLetter by remember { mutableStateOf('A') }
     var paths by remember { mutableStateOf(listOf<Path>()) }
     var currentPath by remember { mutableStateOf<Path?>(null) }
+    var recognitionResult by remember { mutableStateOf<Boolean?>(null) }
+    var recognitionFinished by remember { mutableStateOf(false) }
+    var recognitionGeneration by remember { mutableStateOf(0) }
 
     val context = LocalContext.current
     var textToSpeech: TextToSpeech? by remember { mutableStateOf(null) }
     var ttsInitialized by remember { mutableStateOf(false) }
-
-    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.background_animation))
 
     // Copyright
     // The Builder by Kevin MacLeod | https://incompetech.com/
@@ -67,6 +68,26 @@ fun AlphabetDrawingScreen() {
     // https://creativecommons.org/licenses/by/3.0/
     //
     val mediaPlayer = remember { MediaPlayer.create(context, R.raw.background_music) }
+
+    LaunchedEffect(paths, currentLetter) {
+        val generation = recognitionGeneration
+        if (paths.isNotEmpty() && !recognitionFinished && recognitionResult == null) {
+            kotlinx.coroutines.delay(3_000)
+            if (generation == recognitionGeneration && !recognitionFinished && recognitionResult == null) {
+                recognitionFinished = true
+                recognitionResult = AppConstants.isPathsSimilarToChar(paths, currentLetter)
+            }
+        }
+    }
+
+    LaunchedEffect(recognitionResult) {
+        if (recognitionResult != null) {
+            kotlinx.coroutines.delay(1_800)
+            recognitionGeneration++
+            recognitionResult = null
+            paths = emptyList()
+        }
+    }
 
     DisposableEffect(Unit) {
         textToSpeech = TextToSpeech(context) { status ->
@@ -99,11 +120,6 @@ fun AlphabetDrawingScreen() {
                 .fillMaxSize()
                 .padding(inlinePadding)
         ) {
-            LottieAnimation(
-                composition = composition,
-                iterations = LottieConstants.IterateForever,
-                modifier = Modifier.fillMaxSize()
-            )
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -149,23 +165,29 @@ fun AlphabetDrawingScreen() {
                                 .pointerInput(Unit) {
                                     detectDragGestures(
                                         onDragStart = { offset ->
+                                        recognitionGeneration++
+                                        recognitionFinished = false
+                                        recognitionResult = null
                                             currentPath = Path().apply {
                                                 moveTo(offset.x, offset.y)
                                             }
                                         },
-                                        onDrag = { change, dragAmount ->
-                                            currentPath?.lineTo(
-                                                change.position.x,
-                                                change.position.y
-                                            )
+                                        onDrag = { change, _ ->
+                                            currentPath?.let { path ->
+                                                currentPath = Path().apply {
+                                                    addPath(path)
+                                                    lineTo(change.position.x, change.position.y)
+                                                }
+                                            }
                                         },
                                         onDragEnd = {
                                             currentPath?.let {
-                                                paths = paths + it
+                                                val completedPaths = paths + it
+                                                paths = completedPaths
                                                 currentPath = null
 
-                                                if (AppConstants.isPathSimilarToChar(
-                                                        it,
+                                                if (AppConstants.isPathsSimilarToChar(
+                                                        completedPaths,
                                                         currentLetter
                                                     )
                                                 ) {
@@ -211,7 +233,19 @@ fun AlphabetDrawingScreen() {
                 ) {
                     Button(
                         onClick = {
+                            currentLetter = if (currentLetter == 'A') 'Z' else currentLetter - 1
                             paths = emptyList()
+                            recognitionResult = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFA726))
+                    ) {
+                        Text(stringResource(R.string.previous_letter), color = Color.White)
+                    }
+
+                    Button(
+                        onClick = {
+                            paths = emptyList()
+                            recognitionResult = null
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF5350))
                     ) {
@@ -222,6 +256,7 @@ fun AlphabetDrawingScreen() {
                         onClick = {
                             currentLetter = if (currentLetter == 'Z') 'A' else currentLetter + 1
                             paths = emptyList()
+                            recognitionResult = null
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF66BB6A))
                     ) {
@@ -229,6 +264,21 @@ fun AlphabetDrawingScreen() {
                     }
                 }
             }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = recognitionResult != null,
+        enter = scaleIn(),
+        exit = scaleOut()
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(
+                text = if (recognitionResult == true) "✓ Success!" else "✕ Try Again",
+                color = if (recognitionResult == true) Color(0xFF2E7D32) else Color(0xFFC62828),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
